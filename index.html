@@ -488,25 +488,25 @@ python yourcode.py</code></pre>
           <ul>
             <hr>
             <p>Receive up to n bytes.</p>
-            <pre><code class="language-python">in = r.recv(n)</code></pre>
+            <pre><code class="language-python">msg = r.recv(n)</code></pre>
             <hr>
             <p>Receive exactly n bytes.</p>
-            <pre><code class="language-python">in = r.recvn(n)</code></pre>
+            <pre><code class="language-python">msg = r.recvn(n)</code></pre>
             <hr>
             <p>Receive up to and including a newline.</p>
-            <pre><code class="language-python">in = r.recvline()</code></pre>
+            <pre><code class="language-python">msg = r.recvline()</code></pre>
             <hr>
             <p>Receive up to and including the string <code>prompt</code>.</p>
-            <pre><code class="language-python">in = r.recvuntil(prompt)</code></pre>
+            <pre><code class="language-python">msg = r.recvuntil(prompt)</code></pre>
             <hr>
             <p>Receive up to and including something that matches <code>regex</code>.</p>
-            <pre><code class="language-python">in = r.recvregex(regex)</code></pre>
+            <pre><code class="language-python">msg = r.recvregex(regex)</code></pre>
             <hr>
             <p>Receive everything until the connection closes.</p>
-            <pre><code class="language-python">in = r.recvall()</code></pre>
+            <pre><code class="language-python">msg = r.recvall()</code></pre>
             <hr>
             <p>Receive everything that comes within 0.1 seconds
-            <pre><code class="language-python">in = r.recvall(timeout=0.1)</code></pre>
+            <pre><code class="language-python">msg = r.recvall(timeout=0.1)</code></pre>
             <p>
               <hr>
           </ul>
@@ -515,7 +515,7 @@ python yourcode.py</code></pre>
 
         <section class="card">
           <h2>Sending</h2>
-          <p>Once you have opened a tube, you can send to it with these methods. All of expect data in bytes, see the
+          <p>Once you have opened a tube, you can send to it with these methods. All of these expect arguments in bytes, see the
             conversion section on how to work with this</p>
           <ul>
             <hr>
@@ -563,6 +563,9 @@ num = u64(data)  # unpack 8 bytes to 64-bit int</code></pre>
             <pre><code class="language-python">addr = 0x1234
 addr = p32(num)  # pack to 4 bytes
 addr = p64(num)  # pack to 8 bytes</code></pre>
+            <p>Use this when sending some address you got from for example objdump</p>
+            <pre><code class="language-python">objdumped_addr = 0x0000000000003fe8
+sendable_addr = p64(objdumped_addr)</code></pre>
             <hr>
           </ul>
         </section>
@@ -590,7 +593,7 @@ print(rop.rdi) # prints a gadget for changing rdi (if found)
 asm = shellcraft.cat(path)  # Generate assembly that dumps the file at path.
 asm = shellcraft.exit(code) # Generate assembly that exits with code code.
 asm = shellcraft.nop()      # Generate assembly for a single-byte no-op.
-bin = asm(asm)              # Assembles asm into a binary snippet.
+bmsg = asm(asm)              # Assembles asm into a binary snippet.
 asm = disasm(bin)           # Disassembles bin into assembly.</code></pre>
             <a href="https://docs.pwntools.com/en/latest/shellcraft.html">Full documentation</a>
             <hr>
